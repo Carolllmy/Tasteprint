@@ -275,10 +275,19 @@ export default function App(){
   const [hov,setHov]=useState(null);
   const [cam,setCam]=useState({x:0,y:0,z:1});
   const [pan,setPan]=useState(null);
+  const [sidebarOpen,setSidebarOpen]=useState(false);
+  const [isMobile,setIsMobile]=useState(typeof window!=='undefined'&&window.innerWidth<768);
   const cRef=useRef(null);
   const dRef=useRef(null);
   const camRef=useRef(cam);
   camRef.current=cam;
+  
+  // Detect mobile on resize
+  useEffect(()=>{
+    const check=()=>setIsMobile(window.innerWidth<768);
+    window.addEventListener("resize",check);
+    return()=>window.removeEventListener("resize",check);
+  },[]);
 
   /* ---- PERSIST ---- */
   useEffect(()=>{
@@ -431,23 +440,49 @@ export default function App(){
       <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&family=Sora:wght@400;500;600;700&family=Work+Sans:wght@400;500;600;700&family=Figtree:wght@400;500;600;700&family=Instrument+Serif&display=swap" rel="stylesheet"/>
 
       {/* HEADER */}
-      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 20px",borderBottom:`1px solid ${p.bd}`,background:p.card+"cc",backdropFilter:"blur(12px)",zIndex:50,transition:"all .4s"}}>
-        <div style={{display:"flex",alignItems:"baseline",gap:8}}><span style={{fontFamily:"'Instrument Serif',Georgia,serif",fontSize:22,color:p.tx,letterSpacing:"-0.02em"}}>Tasteprint</span><span style={{fontSize:10,color:p.mu,letterSpacing:"0.1em",textTransform:"uppercase"}}>playground</span></div>
-        <div style={{display:"flex",alignItems:"center",gap:10}}>
-          <div style={{display:"flex",gap:5}}>{Object.entries(PAL).map(([k,v])=><button key={k} onClick={()=>setPal(k)} title={v.name} style={{width:20,height:20,borderRadius:999,border:pal===k?`2px solid ${p.ac}`:"2px solid transparent",background:k==="noir"?"#1A1A1E":v.ac,cursor:"pointer",transition:"all .2s",transform:pal===k?"scale(1.2)":"scale(1)"}}/>)}</div>
-          <div style={{width:1,height:20,background:p.bd}}/>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:isMobile?"8px 12px":"10px 20px",borderBottom:`1px solid ${p.bd}`,background:p.card+"cc",backdropFilter:"blur(12px)",zIndex:50,transition:"all .4s",flexWrap:"wrap",gap:8}}>
+        <div style={{display:"flex",alignItems:"center",gap:8}}>
+          {isMobile&&<button onClick={()=>setSidebarOpen(!sidebarOpen)} style={{width:32,height:32,borderRadius:8,border:`1px solid ${p.bd}`,background:sidebarOpen?p.ac+"22":"transparent",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={p.tx} strokeWidth="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+          </button>}
+          <span style={{fontFamily:"'Instrument Serif',Georgia,serif",fontSize:isMobile?18:22,color:p.tx,letterSpacing:"-0.02em"}}>Tasteprint</span>
+          {!isMobile&&<span style={{fontSize:10,color:p.mu,letterSpacing:"0.1em",textTransform:"uppercase"}}>playground</span>}
+        </div>
+        <div style={{display:"flex",alignItems:"center",gap:isMobile?6:10,flexWrap:"wrap"}}>
+          <div style={{display:"flex",gap:isMobile?3:5}}>{Object.entries(PAL).map(([k,v])=><button key={k} onClick={()=>setPal(k)} title={v.name} style={{width:isMobile?18:20,height:isMobile?18:20,borderRadius:999,border:pal===k?`2px solid ${p.ac}`:"2px solid transparent",background:k==="noir"?"#1A1A1E":v.ac,cursor:"pointer",transition:"all .2s",transform:pal===k?"scale(1.2)":"scale(1)"}}/>)}</div>
+          {!isMobile&&<><div style={{width:1,height:20,background:p.bd}}/>
           <div style={{display:"flex",alignItems:"center",gap:4}}><span style={{fontSize:10,color:p.mu}}>{gest}</span><Radar taste={taste} ac={p.ac}/></div>
-          <div style={{width:1,height:20,background:p.bd}}/>
+          <div style={{width:1,height:20,background:p.bd}}/></>}
           <button onClick={exportJSON} title="Export layout" style={btnSt}>Export</button>
           <button onClick={importJSON} title="Import layout" style={btnSt}>Import</button>
           <button onClick={undo} style={btnSt}>Undo</button>
         </div>
       </div>
 
-      <div style={{display:"flex",flex:1,overflow:"hidden"}}>
-        {/* LIBRARY */}
-        <div style={{width:210,padding:"10px 0",overflowY:"auto",borderRight:`1px solid ${p.bd}`,background:p.card+"88",backdropFilter:"blur(8px)",flexShrink:0,transition:"all .4s"}}>
-          <div style={{padding:"2px 14px 8px",fontSize:9,color:p.mu,textTransform:"uppercase",letterSpacing:"0.1em"}}>Components</div>
+      <div style={{display:"flex",flex:1,overflow:"hidden",position:"relative"}}>
+        {/* LIBRARY - Sidebar */}
+        <div style={{
+          width:isMobile?280:210,
+          padding:"10px 0",
+          overflowY:"auto",
+          borderRight:`1px solid ${p.bd}`,
+          background:p.card,
+          backdropFilter:"blur(8px)",
+          flexShrink:0,
+          transition:"transform .3s ease, opacity .3s ease",
+          position:isMobile?"absolute":"relative",
+          left:0,top:0,bottom:0,
+          zIndex:isMobile?100:1,
+          transform:isMobile&&!sidebarOpen?"translateX(-100%)":"translateX(0)",
+          boxShadow:isMobile&&sidebarOpen?`4px 0 20px ${p.tx}15`:"none"
+        }}>
+          <div style={{padding:"2px 14px 8px",fontSize:9,color:p.mu,textTransform:"uppercase",letterSpacing:"0.1em",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <span>Components</span>
+            {isMobile&&<button onClick={()=>setSidebarOpen(false)} style={{background:"none",border:"none",padding:4,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={p.mu} strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            </button>}
+          </div>
+          {isMobile&&<div style={{padding:"0 14px 10px",fontSize:10,color:p.mu,opacity:.7}}>Tap to add to canvas</div>}
           {LIB.map(cat=>(
             <div key={cat.cat}>
               <div onClick={()=>setExpCat(expCat===cat.cat?null:cat.cat)} style={{padding:"6px 14px",fontSize:11,fontWeight:500,color:expCat===cat.cat?p.tx:p.mu,cursor:"pointer",userSelect:"none"}}><span style={{display:"inline-block",width:12,fontSize:9,transition:"transform .2s",transform:expCat===cat.cat?"rotate(90deg)":"rotate(0)"}}>{">"}</span>{cat.cat}</div>
@@ -457,7 +492,14 @@ export default function App(){
                     const pv=prefV[item.type]||0;const vn=varName(item.type,pv);
                     return(
                       <div key={item.type} draggable onDragStart={()=>{dRef.current=item}}
-                        style={{padding:"7px 8px",borderRadius:8,cursor:"grab",display:"flex",alignItems:"center",gap:10,transition:"background .12s"}}
+                        onClick={()=>{
+                          if(isMobile){
+                            // On mobile, tap to add to center of canvas
+                            const ns={id:uid(),type:item.type,x:150,y:150,w:item.w,h:item.h,variant:prefV[item.type]||0,texts:{},font:0};
+                            push([...shapes,ns]);setSel(ns.id);setSidebarOpen(false);
+                          }
+                        }}
+                        style={{padding:"7px 8px",borderRadius:8,cursor:isMobile?"pointer":"grab",display:"flex",alignItems:"center",gap:10,transition:"background .12s"}}
                         onMouseEnter={e=>e.currentTarget.style.background=p.su} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
                         <div style={{width:44,height:30,borderRadius:5,overflow:"hidden",flexShrink:0,pointerEvents:"none",border:`1px solid ${p.bd}`,transition:"all .25s"}}>
                           <div style={{transform:`scale(${Math.min(44/item.w,30/item.h)})`,transformOrigin:"top left",width:item.w,height:item.h}}><C type={item.type} v={pv} p={p}/></div>
@@ -475,14 +517,24 @@ export default function App(){
           ))}
         </div>
 
+        {/* Mobile sidebar overlay */}
+        {isMobile&&sidebarOpen&&<div onClick={()=>setSidebarOpen(false)} style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.3)",zIndex:99}}/>}
+
         {/* CANVAS */}
         <div ref={cRef} onDrop={onDrop} onDragOver={e=>e.preventDefault()} onMouseMove={onMove} onMouseUp={onUp} onMouseLeave={onUp}
+          onTouchMove={e=>{
+            if(drag&&e.touches[0]){
+              const touch=e.touches[0];
+              onMove({clientX:touch.clientX,clientY:touch.clientY,preventDefault:()=>{}});
+            }
+          }}
+          onTouchEnd={onUp}
           onMouseDown={e=>{
             if(e.button===1){e.preventDefault();setPan({x:e.clientX,y:e.clientY})}
             if(e.button===0&&(e.target===cRef.current||e.target.closest("[data-c]")))setSel(null);
           }}
           onContextMenu={e=>e.preventDefault()}
-          style={{flex:1,position:"relative",overflow:"hidden",cursor:pan?"grabbing":"default"}}>
+          style={{flex:1,position:"relative",overflow:"hidden",cursor:pan?"grabbing":"default",touchAction:drag?"none":"auto"}}>
 
           {/* dot grid */}
           <svg data-c="1" style={{position:"absolute",inset:0,width:"100%",height:"100%",pointerEvents:"none"}}>
@@ -526,8 +578,10 @@ export default function App(){
                       <svg width="10" height="10" viewBox="0 0 10 10" stroke="#fff" strokeWidth="1.5" strokeLinecap="round"><line x1="2" y1="2" x2="8" y2="8"/><line x1="8" y1="2" x2="2" y2="8"/></svg>
                     </button>
                   )}
-                  <div onMouseDown={e=>onDown(e,s)} onMouseEnter={()=>setHov(s.id)} onMouseLeave={()=>setHov(null)}
-                    style={{width:s.w,height:s.h,cursor:isDrg?"grabbing":"grab",transition:isDrg?"none":"transform .1s",transform:isDrg?"scale(1.015)":"scale(1)",filter:isDrg?`drop-shadow(0 8px 20px ${p.ac}15)`:"none",outline:isSel?`2px solid ${p.ac}55`:"none",outlineOffset:4,borderRadius:14}}>
+                  <div onMouseDown={e=>onDown(e,s)} 
+                    onTouchStart={e=>{if(e.touches[0]){const t=e.touches[0];onDown({clientX:t.clientX,clientY:t.clientY,stopPropagation:()=>{}},s)}}}
+                    onMouseEnter={()=>setHov(s.id)} onMouseLeave={()=>setHov(null)}
+                    style={{width:s.w,height:s.h,cursor:isDrg?"grabbing":"grab",transition:isDrg?"none":"transform .1s",transform:isDrg?"scale(1.015)":"scale(1)",filter:isDrg?`drop-shadow(0 8px 20px ${p.ac}15)`:"none",outline:isSel?`2px solid ${p.ac}55`:"none",outlineOffset:4,borderRadius:14,touchAction:"none"}}>
                     <C type={s.type} v={s.variant||0} p={p} editable={isSel} texts={s.texts||{}} onText={(k,val)=>updateText(s.id,k,val)} font={s.font||0}/>
                     {isSel&&<div onMouseDown={e=>{e.stopPropagation();setRsz(s.id)}} style={{position:"absolute",right:-4,bottom:-4,width:8,height:8,background:p.ac,borderRadius:2,cursor:"nwse-resize",zIndex:11}}/>}
                   </div>
@@ -538,17 +592,17 @@ export default function App(){
 
           {/* empty state */}
           {shapes.length===0&&(
-            <div data-c="1" style={{position:"absolute",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",pointerEvents:"none"}}>
-              <p style={{fontFamily:"'Instrument Serif',Georgia,serif",fontSize:26,color:p.mu,opacity:.3,margin:"0 0 6px"}}>Drag components here</p>
-              <p style={{fontSize:13,color:p.mu,opacity:.2}}>Switch styles with arrows. Your taste is remembered.</p>
+            <div data-c="1" style={{position:"absolute",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",pointerEvents:"none",padding:20,textAlign:"center"}}>
+              <p style={{fontFamily:"'Instrument Serif',Georgia,serif",fontSize:isMobile?20:26,color:p.mu,opacity:.3,margin:"0 0 6px"}}>{isMobile?"Tap menu to add":"Drag components here"}</p>
+              <p style={{fontSize:isMobile?11:13,color:p.mu,opacity:.2}}>{isMobile?"Open sidebar and tap components":"Switch styles with arrows. Your taste is remembered."}</p>
             </div>
           )}
 
           {/* zoom indicator */}
-          <div style={{position:"absolute",bottom:12,right:14,display:"flex",alignItems:"center",gap:6,zIndex:60}}>
-            <button onClick={()=>setCam(c=>{const nz=Math.max(.15,c.z-0.15);const el=cRef.current.getBoundingClientRect();const mx=el.width/2,my=el.height/2;return{x:mx-(mx-c.x)*(nz/c.z),y:my-(my-c.y)*(nz/c.z),z:nz}})} style={{width:24,height:24,borderRadius:6,border:`1px solid ${p.bd}`,background:p.card,color:p.mu,fontSize:14,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"system-ui",padding:0}}>-</button>
-            <button onClick={()=>setCam({x:0,y:0,z:1})} title="Reset zoom" style={{fontSize:10,color:p.mu,background:p.card,border:`1px solid ${p.bd}`,borderRadius:6,padding:"3px 8px",cursor:"pointer",fontFamily:"inherit",minWidth:42,textAlign:"center"}}>{zoomPct}%</button>
-            <button onClick={()=>setCam(c=>{const nz=Math.min(4,c.z+0.15);const el=cRef.current.getBoundingClientRect();const mx=el.width/2,my=el.height/2;return{x:mx-(mx-c.x)*(nz/c.z),y:my-(my-c.y)*(nz/c.z),z:nz}})} style={{width:24,height:24,borderRadius:6,border:`1px solid ${p.bd}`,background:p.card,color:p.mu,fontSize:14,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"system-ui",padding:0}}>+</button>
+          <div style={{position:"absolute",bottom:isMobile?16:12,right:isMobile?16:14,display:"flex",alignItems:"center",gap:isMobile?8:6,zIndex:60}}>
+            <button onClick={()=>setCam(c=>{const nz=Math.max(.15,c.z-0.15);const el=cRef.current.getBoundingClientRect();const mx=el.width/2,my=el.height/2;return{x:mx-(mx-c.x)*(nz/c.z),y:my-(my-c.y)*(nz/c.z),z:nz}})} style={{width:isMobile?36:24,height:isMobile?36:24,borderRadius:isMobile?10:6,border:`1px solid ${p.bd}`,background:p.card,color:p.mu,fontSize:isMobile?18:14,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"system-ui",padding:0}}>-</button>
+            <button onClick={()=>setCam({x:0,y:0,z:1})} title="Reset zoom" style={{fontSize:isMobile?12:10,color:p.mu,background:p.card,border:`1px solid ${p.bd}`,borderRadius:isMobile?10:6,padding:isMobile?"6px 12px":"3px 8px",cursor:"pointer",fontFamily:"inherit",minWidth:isMobile?52:42,textAlign:"center"}}>{zoomPct}%</button>
+            <button onClick={()=>setCam(c=>{const nz=Math.min(4,c.z+0.15);const el=cRef.current.getBoundingClientRect();const mx=el.width/2,my=el.height/2;return{x:mx-(mx-c.x)*(nz/c.z),y:my-(my-c.y)*(nz/c.z),z:nz}})} style={{width:isMobile?36:24,height:isMobile?36:24,borderRadius:isMobile?10:6,border:`1px solid ${p.bd}`,background:p.card,color:p.mu,fontSize:isMobile?18:14,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"system-ui",padding:0}}>+</button>
           </div>
         </div>
       </div>

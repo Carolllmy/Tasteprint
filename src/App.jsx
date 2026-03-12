@@ -3,6 +3,19 @@ import React, { useState, useRef, useCallback, useEffect } from "react";
 const STORE_KEY = "tasteprint";
 function load(k,d){try{const s=JSON.parse(localStorage.getItem(STORE_KEY)||"{}");return s[k]!==undefined?s[k]:d}catch{return d}}
 
+const FONTS = [
+  {name:"DM Sans",family:"'DM Sans',system-ui,sans-serif"},
+  {name:"Inter",family:"'Inter',system-ui,sans-serif"},
+  {name:"Plus Jakarta Sans",family:"'Plus Jakarta Sans',system-ui,sans-serif"},
+  {name:"Manrope",family:"'Manrope',system-ui,sans-serif"},
+  {name:"Space Grotesk",family:"'Space Grotesk',system-ui,sans-serif"},
+  {name:"Outfit",family:"'Outfit',system-ui,sans-serif"},
+  {name:"Sora",family:"'Sora',system-ui,sans-serif"},
+  {name:"Work Sans",family:"'Work Sans',system-ui,sans-serif"},
+  {name:"Figtree",family:"'Figtree',system-ui,sans-serif"},
+  {name:"Instrument Serif",family:"'Instrument Serif',Georgia,serif"},
+];
+
 const PAL = {
   warm:  { bg:"#FFF8F2",card:"#FFFFFF",ac:"#E07A5F",ac2:"#F2B880",tx:"#3D2C2C",mu:"#9C8578",bd:"rgba(224,122,95,0.12)",su:"#FDF0E8",name:"Warm" },
   cool:  { bg:"#F4F7FB",card:"#FFFFFF",ac:"#5B8DB8",ac2:"#7CAED4",tx:"#2C3644",mu:"#7A8B9C",bd:"rgba(91,141,184,0.12)",su:"#EBF2F8",name:"Cool" },
@@ -97,8 +110,8 @@ function Radar({taste,ac}){
 }
 
 /* ========== COMPONENT RENDERER ========== */
-function C({type,v=0,p,editable,texts={},onText}){
-  const f="'DM Sans',system-ui,sans-serif";
+function C({type,v=0,p,editable,texts={},onText,font=0}){
+  const f=FONTS[font]?.family||FONTS[0].family;
   const b={width:"100%",height:"100%",fontFamily:f,overflow:"hidden"};
 
   /* Editable text helper — renders plain span unless editable */
@@ -327,6 +340,15 @@ export default function App(){
     else nudge({complexity:.01});
   },[shapes,nudge]);
 
+  const cycleFont=useCallback((id,dir)=>{
+    setShapes(prev=>prev.map(s=>{
+      if(s.id!==id)return s;
+      let nf=((s.font||0)+dir)%FONTS.length;
+      if(nf<0)nf=FONTS.length-1;
+      return{...s,font:nf};
+    }));
+  },[]);
+
   const delShape=useCallback((id)=>{
     push(shapes.filter(s=>s.id!==id));
     if(sel===id)setSel(null);
@@ -345,7 +367,7 @@ export default function App(){
   const onDrop=useCallback(e=>{
     e.preventDefault();const info=dRef.current;if(!info)return;
     const pt=toCanvas(e.clientX,e.clientY);
-    const ns={id:uid(),type:info.type,x:pt.x-info.w/2,y:pt.y-info.h/2,w:info.w,h:info.h,variant:prefV[info.type]||0,texts:{}};
+    const ns={id:uid(),type:info.type,x:pt.x-info.w/2,y:pt.y-info.h/2,w:info.w,h:info.h,variant:prefV[info.type]||0,texts:{},font:0};
     const sn=snap(ns,shapes);if(sn.x!==null)ns.x=sn.x;if(sn.y!==null)ns.y=sn.y;
     push([...shapes,ns]);setSel(ns.id);nudge({complexity:.02});dRef.current=null;
   },[shapes,push,nudge,prefV,toCanvas]);
@@ -406,7 +428,7 @@ export default function App(){
 
   return(
     <div style={{width:"100%",height:"100vh",display:"flex",flexDirection:"column",background:p.bg,fontFamily:"'DM Sans',system-ui,sans-serif",color:p.tx,transition:"background .4s,color .4s"}}>
-      <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Instrument+Serif&display=swap" rel="stylesheet"/>
+      <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&family=Sora:wght@400;500;600;700&family=Work+Sans:wght@400;500;600;700&family=Figtree:wght@400;500;600;700&family=Instrument+Serif&display=swap" rel="stylesheet"/>
 
       {/* HEADER */}
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 20px",borderBottom:`1px solid ${p.bd}`,background:p.card+"cc",backdropFilter:"blur(12px)",zIndex:50,transition:"all .4s"}}>
@@ -475,17 +497,24 @@ export default function App(){
           <div style={{position:"absolute",left:0,top:0,transform:`translate(${cam.x}px,${cam.y}px) scale(${cam.z})`,transformOrigin:"0 0",willChange:"transform"}}>
             {shapes.map(s=>{
               const isSel=sel===s.id,isDrg=drag===s.id,isHov=hov===s.id;
-              const mx=maxV(s.type),showVar=(isSel||isHov)&&!isDrg&&mx>1;
+              const mx=maxV(s.type),showBar=(isSel||isHov)&&!isDrg;
               const showDel=(isSel||isHov)&&!isDrg;
               const vn=varName(s.type,s.variant||0);
+              const fn=FONTS[s.font||0]?.name||FONTS[0].name;
               return(
                 <div key={s.id} style={{position:"absolute",left:s.x,top:s.y,width:s.w,zIndex:isDrg?100:isSel?50:1}}>
-                  {/* variant picker */}
-                  {showVar&&(
-                    <div style={{position:"absolute",top:-34,left:"50%",transform:"translateX(-50%)",display:"flex",alignItems:"center",gap:2,zIndex:200,background:p.card,border:`1px solid ${p.bd}`,borderRadius:999,padding:"2px 3px",boxShadow:`0 4px 16px ${p.tx}10`,whiteSpace:"nowrap"}}>
-                      <button onPointerDown={e=>{e.stopPropagation();e.preventDefault();cycle(s.id,-1)}} style={{width:26,height:26,borderRadius:999,border:"none",background:p.su,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",color:p.tx,fontSize:15,fontFamily:"system-ui",padding:0}}>{"‹"}</button>
-                      <span style={{fontSize:9,color:p.mu,padding:"0 5px",minWidth:60,textAlign:"center"}}>{vn}</span>
-                      <button onPointerDown={e=>{e.stopPropagation();e.preventDefault();cycle(s.id,1)}} style={{width:26,height:26,borderRadius:999,border:"none",background:p.su,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",color:p.tx,fontSize:15,fontFamily:"system-ui",padding:0}}>{"›"}</button>
+                  {/* toolbar: variant + font pickers */}
+                  {showBar&&(
+                    <div style={{position:"absolute",top:-36,left:"50%",transform:"translateX(-50%)",display:"flex",alignItems:"center",gap:1,zIndex:200,background:p.card,border:`1px solid ${p.bd}`,borderRadius:999,padding:"2px 3px",boxShadow:`0 4px 16px ${p.tx}10`,whiteSpace:"nowrap"}}>
+                      {mx>1&&<>
+                        <button onPointerDown={e=>{e.stopPropagation();e.preventDefault();cycle(s.id,-1)}} style={{width:26,height:26,borderRadius:999,border:"none",background:p.su,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",color:p.tx,fontSize:15,fontFamily:"system-ui",padding:0}}>{"‹"}</button>
+                        <span style={{fontSize:9,color:p.mu,padding:"0 4px",minWidth:52,textAlign:"center"}}>{vn}</span>
+                        <button onPointerDown={e=>{e.stopPropagation();e.preventDefault();cycle(s.id,1)}} style={{width:26,height:26,borderRadius:999,border:"none",background:p.su,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",color:p.tx,fontSize:15,fontFamily:"system-ui",padding:0}}>{"›"}</button>
+                        <div style={{width:1,height:16,background:p.bd,margin:"0 2px"}}/>
+                      </>}
+                      <button onPointerDown={e=>{e.stopPropagation();e.preventDefault();cycleFont(s.id,-1)}} style={{width:26,height:26,borderRadius:999,border:"none",background:p.su,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",color:p.tx,fontSize:15,fontFamily:"system-ui",padding:0}}>{"‹"}</button>
+                      <span style={{fontSize:9,color:p.ac,padding:"0 4px",minWidth:56,textAlign:"center",fontFamily:FONTS[s.font||0]?.family||FONTS[0].family,fontWeight:500}}>{fn}</span>
+                      <button onPointerDown={e=>{e.stopPropagation();e.preventDefault();cycleFont(s.id,1)}} style={{width:26,height:26,borderRadius:999,border:"none",background:p.su,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",color:p.tx,fontSize:15,fontFamily:"system-ui",padding:0}}>{"›"}</button>
                     </div>
                   )}
                   {/* delete button */}
@@ -499,7 +528,7 @@ export default function App(){
                   )}
                   <div onMouseDown={e=>onDown(e,s)} onMouseEnter={()=>setHov(s.id)} onMouseLeave={()=>setHov(null)}
                     style={{width:s.w,height:s.h,cursor:isDrg?"grabbing":"grab",transition:isDrg?"none":"transform .1s",transform:isDrg?"scale(1.015)":"scale(1)",filter:isDrg?`drop-shadow(0 8px 20px ${p.ac}15)`:"none",outline:isSel?`2px solid ${p.ac}55`:"none",outlineOffset:4,borderRadius:14}}>
-                    <C type={s.type} v={s.variant||0} p={p} editable={isSel} texts={s.texts||{}} onText={(k,val)=>updateText(s.id,k,val)}/>
+                    <C type={s.type} v={s.variant||0} p={p} editable={isSel} texts={s.texts||{}} onText={(k,val)=>updateText(s.id,k,val)} font={s.font||0}/>
                     {isSel&&<div onMouseDown={e=>{e.stopPropagation();setRsz(s.id)}} style={{position:"absolute",right:-4,bottom:-4,width:8,height:8,background:p.ac,borderRadius:2,cursor:"nwse-resize",zIndex:11}}/>}
                   </div>
                 </div>

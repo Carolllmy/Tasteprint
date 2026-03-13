@@ -651,7 +651,7 @@ export default function App(){
   const [pan,setPan]=useState(null);
   const [sidebarOpen,setSidebarOpen]=useState(false);
   const [isMobile,setIsMobile]=useState(typeof window!=='undefined'&&window.innerWidth<768);
-  const [sidebarWidth,setSidebarWidth]=useState(()=>load("sidebarWidth",360));
+  const [sidebarWidth,setSidebarWidth]=useState(()=>load("sidebarWidth",240));
   const [sidebarResizing,setSidebarResizing]=useState(false);
   const cRef=useRef(null);
   const dRef=useRef(null);
@@ -872,10 +872,9 @@ export default function App(){
             <div key={cat.cat}>
               <div onClick={()=>setExpCat(isExpanded ? expCat.filter(c=>c!==cat.cat) : [...expCat, cat.cat])} style={{padding:"8px 14px",fontSize:12,fontWeight:600,color:isExpanded?p.tx:p.mu,cursor:"pointer",userSelect:"none",borderBottom:`1px solid ${p.bd}`}}><span style={{display:"inline-block",width:14,fontSize:12,transition:"transform .2s",transform:isExpanded?"rotate(90deg)":"rotate(0)"}}>▶</span> {cat.cat}</div>
               {isExpanded&&(
-                <div style={{padding:"8px",display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                <div style={{padding:"4px 8px 8px",display:"flex",flexDirection:"column",gap:4}}>
                   {cat.items.map(item=>{
                     const pv=prefV[item.type]||0;const vn=varName(item.type,pv);
-                    const thumbW=120, thumbH=80;
                     return(
                       <div key={item.type} draggable onDragStart={()=>{dRef.current=item}}
                         onClick={()=>{
@@ -884,12 +883,12 @@ export default function App(){
                             push([...shapes,ns]);setSel(ns.id);setSidebarOpen(false);
                           }
                         }}
-                        style={{padding:8,borderRadius:10,cursor:isMobile?"pointer":"grab",display:"flex",flexDirection:"column",gap:6,transition:"background .12s",border:`1px solid ${p.bd}`,background:p.card}}
-                        onMouseEnter={e=>e.currentTarget.style.background=p.su} onMouseLeave={e=>e.currentTarget.style.background=p.card}>
-                        <div style={{width:"100%",height:thumbH,borderRadius:6,overflow:"hidden",pointerEvents:"none",background:p.su,display:"flex",alignItems:"center",justifyContent:"center"}}>
-                          <div style={{transform:`scale(${Math.min(thumbW/item.w,thumbH/item.h)*0.85})`,transformOrigin:"center",width:item.w,height:item.h}}><C type={item.type} v={pv} p={p}/></div>
+                        style={{padding:"6px 8px",borderRadius:8,cursor:isMobile?"pointer":"grab",display:"flex",alignItems:"center",gap:10,transition:"background .12s"}}
+                        onMouseEnter={e=>e.currentTarget.style.background=p.su} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                        <div style={{width:56,height:38,borderRadius:6,overflow:"hidden",flexShrink:0,pointerEvents:"none",border:`1px solid ${p.bd}`,background:p.su,display:"flex",alignItems:"center",justifyContent:"center"}}>
+                          <div style={{transform:`scale(${Math.min(56/item.w,38/item.h)*0.8})`,transformOrigin:"center",width:item.w,height:item.h}}><C type={item.type} v={pv} p={p}/></div>
                         </div>
-                        <div style={{display:"flex",flexDirection:"column",gap:2,textAlign:"center"}}>
+                        <div style={{display:"flex",flexDirection:"column",gap:1,minWidth:0}}>
                           <span style={{fontSize:12,fontWeight:500,color:p.tx}}>{item.label}</span>
                           <span style={{fontSize:12,color:p.mu}}>{vn}</span>
                         </div>

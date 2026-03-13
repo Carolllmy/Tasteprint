@@ -239,7 +239,7 @@ function C({type,v=0,p,editable,texts={},onText,font=0}){
   if(type==="badge"){
     if(v===0) return <div style={{...b,display:"flex",alignItems:"center",justifyContent:"center"}}><div style={{width:6,height:6,borderRadius:999,background:p.ac}}/></div>;
     if(v===1) return <div style={{...b,display:"flex",alignItems:"center",justifyContent:"center"}}><div style={{width:16,height:16,borderRadius:999,background:p.ac}}/></div>;
-    return <div style={{...b,display:"flex",alignItems:"center",justifyContent:"center"}}><div style={{minWidth:16,height:16,borderRadius:999,background:p.ac,padding:"0 4px",display:"flex",alignItems:"center",justifyContent:"center"}}><span style={{fontSize:10,fontWeight:500,color:"#fff"}}>3</span></div></div>;
+    return <div style={{...b,display:"flex",alignItems:"center",justifyContent:"center"}}><div style={{minWidth:16,height:16,borderRadius:999,background:p.ac,padding:"0 4px",display:"flex",alignItems:"center",justifyContent:"center"}}><span style={{fontSize:12,fontWeight:500,color:"#fff"}}>3</span></div></div>;
   }
 
   /* Progress Indicator - M3 */
@@ -773,7 +773,7 @@ export default function App(){
   },[]);
 
   const p=PAL[pal];
-  const btnSt={background:"none",border:`1px solid ${p.bd}`,borderRadius:8,padding:"5px 12px",fontSize:11,color:p.mu,cursor:"pointer",fontFamily:"inherit"};
+  const btnSt={background:"none",border:`1px solid ${p.bd}`,borderRadius:8,padding:"5px 12px",fontSize:12,color:p.mu,cursor:"pointer",fontFamily:"inherit"};
   const zoomPct=Math.round(cam.z*100);
 
   return(
@@ -787,12 +787,12 @@ export default function App(){
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={p.tx} strokeWidth="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
           </button>}
           <span style={{fontFamily:"'Instrument Serif',Georgia,serif",fontSize:isMobile?24:32,color:p.tx,letterSpacing:"-0.02em"}}>Tasteprint</span>
-          {!isMobile&&<span style={{fontSize:10,color:p.mu,letterSpacing:"0.1em",textTransform:"uppercase"}}>M3 playground</span>}
+          {!isMobile&&<span style={{fontSize:12,color:p.mu,letterSpacing:"0.1em",textTransform:"uppercase"}}>M3 playground</span>}
         </div>
         <div style={{display:"flex",alignItems:"center",gap:isMobile?6:10,flexWrap:"wrap"}}>
           <div style={{display:"flex",gap:isMobile?3:5}}>{Object.entries(PAL).map(([k,v])=><button key={k} onClick={()=>setPal(k)} title={v.name} style={{width:isMobile?18:20,height:isMobile?18:20,borderRadius:999,border:pal===k?`2px solid ${p.ac}`:"2px solid transparent",background:k==="noir"?"#1A1A1E":v.ac,cursor:"pointer",transition:"all .2s",transform:pal===k?"scale(1.2)":"scale(1)"}}/>)}</div>
           {!isMobile&&<><div style={{width:1,height:20,background:p.bd}}/>
-          <div style={{display:"flex",alignItems:"center",gap:4}}><span style={{fontSize:10,color:p.mu}}>{gest}</span><Radar taste={taste} ac={p.ac}/></div>
+          <div style={{display:"flex",alignItems:"center",gap:4}}><span style={{fontSize:12,color:p.mu}}>{gest}</span><Radar taste={taste} ac={p.ac}/></div>
           <div style={{width:1,height:20,background:p.bd}}/></>}
           <button onClick={exportJSON} style={btnSt}>Export</button>
           <button onClick={importJSON} style={btnSt}>Import</button>
@@ -817,18 +817,18 @@ export default function App(){
           transform:isMobile&&!sidebarOpen?"translateX(-100%)":"translateX(0)",
           boxShadow:isMobile&&sidebarOpen?`4px 0 20px ${p.tx}15`:"none"
         }}>
-          <div style={{padding:"2px 14px 8px",fontSize:9,color:p.mu,textTransform:"uppercase",letterSpacing:"0.1em",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <div style={{padding:"2px 14px 8px",fontSize:12,color:p.mu,textTransform:"uppercase",letterSpacing:"0.1em",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
             <span>M3 Components</span>
             {isMobile&&<button onClick={()=>setSidebarOpen(false)} style={{background:"none",border:"none",padding:4,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={p.mu} strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
             </button>}
           </div>
-          {isMobile&&<div style={{padding:"0 14px 10px",fontSize:10,color:p.mu,opacity:.7}}>Tap to add to canvas</div>}
+          {isMobile&&<div style={{padding:"0 14px 10px",fontSize:12,color:p.mu,opacity:.7}}>Tap to add to canvas</div>}
           {LIB.map(cat=>{
             const isExpanded = expCat.includes(cat.cat);
             return (
             <div key={cat.cat}>
-              <div onClick={()=>setExpCat(isExpanded ? expCat.filter(c=>c!==cat.cat) : [...expCat, cat.cat])} style={{padding:"8px 14px",fontSize:12,fontWeight:600,color:isExpanded?p.tx:p.mu,cursor:"pointer",userSelect:"none",borderBottom:`1px solid ${p.bd}`}}><span style={{display:"inline-block",width:14,fontSize:10,transition:"transform .2s",transform:isExpanded?"rotate(90deg)":"rotate(0)"}}>▶</span> {cat.cat}</div>
+              <div onClick={()=>setExpCat(isExpanded ? expCat.filter(c=>c!==cat.cat) : [...expCat, cat.cat])} style={{padding:"8px 14px",fontSize:12,fontWeight:600,color:isExpanded?p.tx:p.mu,cursor:"pointer",userSelect:"none",borderBottom:`1px solid ${p.bd}`}}><span style={{display:"inline-block",width:14,fontSize:12,transition:"transform .2s",transform:isExpanded?"rotate(90deg)":"rotate(0)"}}>▶</span> {cat.cat}</div>
               {isExpanded&&(
                 <div style={{padding:"8px",display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
                   {cat.items.map(item=>{
@@ -848,8 +848,8 @@ export default function App(){
                           <div style={{transform:`scale(${Math.min(thumbW/item.w,thumbH/item.h)*0.85})`,transformOrigin:"center",width:item.w,height:item.h}}><C type={item.type} v={pv} p={p}/></div>
                         </div>
                         <div style={{display:"flex",flexDirection:"column",gap:2,textAlign:"center"}}>
-                          <span style={{fontSize:11,fontWeight:500,color:p.tx}}>{item.label}</span>
-                          <span style={{fontSize:9,color:p.mu}}>{vn}</span>
+                          <span style={{fontSize:12,fontWeight:500,color:p.tx}}>{item.label}</span>
+                          <span style={{fontSize:12,color:p.mu}}>{vn}</span>
                         </div>
                       </div>
                     );
@@ -888,12 +888,12 @@ export default function App(){
                   {/* cycle arrows */}
                   {(isSel||hov===s.id)&&maxV(s.type)>1&&(
                     <div style={{position:"absolute",top:"50%",left:-28,transform:"translateY(-50%)",display:"flex",gap:4}}>
-                      <button onClick={()=>cycle(s.id,-1)} style={{width:22,height:22,borderRadius:6,background:p.card,border:`1px solid ${p.bd}`,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",fontSize:11,color:p.mu}}>‹</button>
+                      <button onClick={()=>cycle(s.id,-1)} style={{width:22,height:22,borderRadius:6,background:p.card,border:`1px solid ${p.bd}`,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",fontSize:12,color:p.mu}}>‹</button>
                     </div>
                   )}
                   {(isSel||hov===s.id)&&maxV(s.type)>1&&(
                     <div style={{position:"absolute",top:"50%",right:-28,transform:"translateY(-50%)"}}>
-                      <button onClick={()=>cycle(s.id,1)} style={{width:22,height:22,borderRadius:6,background:p.card,border:`1px solid ${p.bd}`,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",fontSize:11,color:p.mu}}>›</button>
+                      <button onClick={()=>cycle(s.id,1)} style={{width:22,height:22,borderRadius:6,background:p.card,border:`1px solid ${p.bd}`,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",fontSize:12,color:p.mu}}>›</button>
                     </div>
                   )}
                   {/* delete */}

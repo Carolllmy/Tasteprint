@@ -644,7 +644,7 @@ export default function App(){
   const [gest,setGest]=useState(()=>load("gest",0));
   const [hist,setHist]=useState([]);
   const [rsz,setRsz]=useState(null);
-  const [expCat,setExpCat]=useState("Actions");
+  const [expCat,setExpCat]=useState(["Actions","Communication","Containment","Navigation","Selection","Text inputs"]); // All expanded by default
   const [prefV,setPrefV]=useState(()=>load("prefV",{}));
   const [hov,setHov]=useState(null);
   const [cam,setCam]=useState({x:0,y:0,z:1});
@@ -786,7 +786,7 @@ export default function App(){
           {isMobile&&<button onClick={()=>setSidebarOpen(!sidebarOpen)} style={{width:32,height:32,borderRadius:8,border:`1px solid ${p.bd}`,background:sidebarOpen?p.ac+"22":"transparent",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={p.tx} strokeWidth="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
           </button>}
-          <span style={{fontFamily:"'Instrument Serif',Georgia,serif",fontSize:isMobile?18:22,color:p.tx,letterSpacing:"-0.02em"}}>Tasteprint</span>
+          <span style={{fontFamily:"'Instrument Serif',Georgia,serif",fontSize:isMobile?24:32,color:p.tx,letterSpacing:"-0.02em"}}>Tasteprint</span>
           {!isMobile&&<span style={{fontSize:10,color:p.mu,letterSpacing:"0.1em",textTransform:"uppercase"}}>M3 playground</span>}
         </div>
         <div style={{display:"flex",alignItems:"center",gap:isMobile?6:10,flexWrap:"wrap"}}>
@@ -803,7 +803,7 @@ export default function App(){
       <div style={{display:"flex",flex:1,overflow:"hidden",position:"relative"}}>
         {/* LIBRARY - Sidebar */}
         <div style={{
-          width:isMobile?280:220,
+          width:isMobile?320:300,
           padding:"10px 0",
           overflowY:"auto",
           borderRight:`1px solid ${p.bd}`,
@@ -824,13 +824,16 @@ export default function App(){
             </button>}
           </div>
           {isMobile&&<div style={{padding:"0 14px 10px",fontSize:10,color:p.mu,opacity:.7}}>Tap to add to canvas</div>}
-          {LIB.map(cat=>(
+          {LIB.map(cat=>{
+            const isExpanded = expCat.includes(cat.cat);
+            return (
             <div key={cat.cat}>
-              <div onClick={()=>setExpCat(expCat===cat.cat?null:cat.cat)} style={{padding:"6px 14px",fontSize:11,fontWeight:500,color:expCat===cat.cat?p.tx:p.mu,cursor:"pointer",userSelect:"none"}}><span style={{display:"inline-block",width:12,fontSize:9,transition:"transform .2s",transform:expCat===cat.cat?"rotate(90deg)":"rotate(0)"}}>{">"}</span>{cat.cat}</div>
-              {expCat===cat.cat&&(
-                <div style={{padding:"0 6px 6px",display:"flex",flexDirection:"column",gap:2}}>
+              <div onClick={()=>setExpCat(isExpanded ? expCat.filter(c=>c!==cat.cat) : [...expCat, cat.cat])} style={{padding:"8px 14px",fontSize:12,fontWeight:600,color:isExpanded?p.tx:p.mu,cursor:"pointer",userSelect:"none",borderBottom:`1px solid ${p.bd}`}}><span style={{display:"inline-block",width:14,fontSize:10,transition:"transform .2s",transform:isExpanded?"rotate(90deg)":"rotate(0)"}}>▶</span> {cat.cat}</div>
+              {isExpanded&&(
+                <div style={{padding:"8px",display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
                   {cat.items.map(item=>{
                     const pv=prefV[item.type]||0;const vn=varName(item.type,pv);
+                    const thumbW=120, thumbH=80;
                     return(
                       <div key={item.type} draggable onDragStart={()=>{dRef.current=item}}
                         onClick={()=>{
@@ -839,14 +842,14 @@ export default function App(){
                             push([...shapes,ns]);setSel(ns.id);setSidebarOpen(false);
                           }
                         }}
-                        style={{padding:"7px 8px",borderRadius:8,cursor:isMobile?"pointer":"grab",display:"flex",alignItems:"center",gap:10,transition:"background .12s"}}
-                        onMouseEnter={e=>e.currentTarget.style.background=p.su} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-                        <div style={{width:44,height:30,borderRadius:5,overflow:"hidden",flexShrink:0,pointerEvents:"none",border:`1px solid ${p.bd}`,transition:"all .25s"}}>
-                          <div style={{transform:`scale(${Math.min(44/item.w,30/item.h)})`,transformOrigin:"top left",width:item.w,height:item.h}}><C type={item.type} v={pv} p={p}/></div>
+                        style={{padding:8,borderRadius:10,cursor:isMobile?"pointer":"grab",display:"flex",flexDirection:"column",gap:6,transition:"background .12s",border:`1px solid ${p.bd}`,background:p.card}}
+                        onMouseEnter={e=>e.currentTarget.style.background=p.su} onMouseLeave={e=>e.currentTarget.style.background=p.card}>
+                        <div style={{width:"100%",height:thumbH,borderRadius:6,overflow:"hidden",pointerEvents:"none",background:p.su,display:"flex",alignItems:"center",justifyContent:"center"}}>
+                          <div style={{transform:`scale(${Math.min(thumbW/item.w,thumbH/item.h)*0.85})`,transformOrigin:"center",width:item.w,height:item.h}}><C type={item.type} v={pv} p={p}/></div>
                         </div>
-                        <div style={{display:"flex",flexDirection:"column",gap:1,minWidth:0}}>
-                          <span style={{fontSize:11,color:p.tx}}>{item.label}</span>
-                          <span style={{fontSize:9,color:p.mu,opacity:.6}}>{vn}</span>
+                        <div style={{display:"flex",flexDirection:"column",gap:2,textAlign:"center"}}>
+                          <span style={{fontSize:11,fontWeight:500,color:p.tx}}>{item.label}</span>
+                          <span style={{fontSize:9,color:p.mu}}>{vn}</span>
                         </div>
                       </div>
                     );
@@ -854,7 +857,7 @@ export default function App(){
                 </div>
               )}
             </div>
-          ))}
+          );})}
         </div>
 
         {/* Mobile sidebar overlay */}

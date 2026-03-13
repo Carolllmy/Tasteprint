@@ -205,9 +205,19 @@ const Icons = {
 };
 
 /* ========== M3 COMPONENT RENDERER ========== */
-function C({type,v=0,p,editable,texts={},onText,font=0}){
+function C({type,v=0,p,editable,texts={},onText,font=0,fx={}}){
   const f=FONTS[font]?.family||FONTS[0].family;
-  const b={width:"100%",height:"100%",fontFamily:f,overflow:"hidden",boxSizing:"border-box"};
+  const glowShadow = fx.boxShadow || "";
+  const borderRad = fx.borderRadius || null;
+  const b={
+    width:"100%",
+    height:"100%",
+    fontFamily:f,
+    overflow:"hidden",
+    boxSizing:"border-box",
+    ...(glowShadow && {boxShadow:glowShadow}),
+    ...(fx.backdropFilter && {backdropFilter:fx.backdropFilter}),
+  };
 
   const T=({k,s,children})=>{
     const val=texts[k]!==undefined?texts[k]:children;
@@ -226,12 +236,14 @@ function C({type,v=0,p,editable,texts={},onText,font=0}){
   
   /* Common Button - M3 */
   if(type==="common-button"){
-    const rad = 20;
-    if(v===0) return <div style={{...b,background:p.ac,borderRadius:rad,display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 1px 3px rgba(0,0,0,.12)"}}><T k="label" s={{color:"#fff",fontSize:14,fontWeight:500,letterSpacing:"0.02em"}}>Filled</T></div>;
-    if(v===1) return <div style={{...b,background:"transparent",borderRadius:rad,border:`1px solid ${p.mu}40`,display:"flex",alignItems:"center",justifyContent:"center"}}><T k="label" s={{color:p.ac,fontSize:14,fontWeight:500}}>Outlined</T></div>;
+    const rad = borderRad || 20;
+    const bg = fx.gradient || p.ac;
+    const glow = glowShadow || "0 1px 3px rgba(0,0,0,.12)";
+    if(v===0) return <div style={{...b,background:bg,borderRadius:rad,display:"flex",alignItems:"center",justifyContent:"center",boxShadow:glow}}><T k="label" s={{color:"#fff",fontSize:14,fontWeight:500,letterSpacing:"0.02em"}}>Filled</T></div>;
+    if(v===1) return <div style={{...b,background:"transparent",borderRadius:rad,border:`1px solid ${p.ac}60`,display:"flex",alignItems:"center",justifyContent:"center",boxShadow:glowShadow}}><T k="label" s={{color:p.ac,fontSize:14,fontWeight:500}}>Outlined</T></div>;
     if(v===2) return <div style={{...b,background:"transparent",borderRadius:rad,display:"flex",alignItems:"center",justifyContent:"center"}}><T k="label" s={{color:p.ac,fontSize:14,fontWeight:500}}>Text</T></div>;
-    if(v===3) return <div style={{...b,background:p.su,borderRadius:rad,display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 1px 2px rgba(0,0,0,.08)"}}><T k="label" s={{color:p.ac,fontSize:14,fontWeight:500}}>Elevated</T></div>;
-    return <div style={{...b,background:p.ac+"22",borderRadius:rad,display:"flex",alignItems:"center",justifyContent:"center"}}><T k="label" s={{color:p.ac,fontSize:14,fontWeight:500}}>Tonal</T></div>;
+    if(v===3) return <div style={{...b,background:fx.backdropFilter?`${p.card}`:p.su,borderRadius:rad,display:"flex",alignItems:"center",justifyContent:"center",boxShadow:glow,backdropFilter:fx.backdropFilter||"none"}}><T k="label" s={{color:p.ac,fontSize:14,fontWeight:500}}>Elevated</T></div>;
+    return <div style={{...b,background:p.ac+"22",borderRadius:rad,display:"flex",alignItems:"center",justifyContent:"center",boxShadow:glowShadow}}><T k="label" s={{color:p.ac,fontSize:14,fontWeight:500}}>Tonal</T></div>;
   }
 
   /* FAB - M3 */
@@ -782,16 +794,33 @@ export default function App(){
         reader.readAsDataURL(file);
       });
 
-      // Call API
-      const res = await fetch(`${API_URL}/analyze`, {
+      // Queue for analysis
+      const queueRes = await fetch(`${API_URL}/analyze`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ image: base64 }),
       });
 
-      if (!res.ok) throw new Error("Analysis failed");
+      if (!queueRes.ok) throw new Error("Failed to queue analysis");
       
-      const { style } = await res.json();
+      const { ticketId } = await queueRes.json();
+      
+      // Poll for result (max 60 seconds)
+      let style = null;
+      for (let i = 0; i < 60; i++) {
+        await new Promise(r => setTimeout(r, 1000));
+        const pollRes = await fetch(`${API_URL}/analyze/${ticketId}`);
+        const data = await pollRes.json();
+        
+        if (data.status === "complete") {
+          style = data.style;
+          break;
+        }
+      }
+      
+      if (!style) {
+        throw new Error("Analysis timed out - try again");
+      }
       
       // Create new taste with unique ID
       const newTaste = {
@@ -807,7 +836,7 @@ export default function App(){
       setTempName(newTaste.name);
     } catch (err) {
       console.error("Analysis error:", err);
-      alert("Failed to analyze image. Make sure the server is running.");
+      alert(err.message || "Failed to analyze image");
     } finally {
       setAnalyzing(false);
     }
@@ -855,6 +884,41 @@ export default function App(){
   }, [activeTaste, customTastes]);
 
   const tasteConfig = getActiveTasteConfig();
+
+  // Generate style effects based on taste config
+  const getStyleEffects = useCallback(() => {
+    if (!tasteConfig) return {};
+    
+    const effects = {};
+    
+    // Glow effect
+    if (tasteConfig.glow?.enabled) {
+      const blur = tasteConfig.glow.blur || 15;
+      const color = tasteConfig.glow.color || p.ac;
+      effects.boxShadow = `0 0 ${blur}px ${color}60, 0 0 ${blur * 2}px ${color}30`;
+    }
+    
+    // Gradient background
+    if (tasteConfig.gradient?.enabled) {
+      const colors = tasteConfig.gradient.colors || [p.ac, p.ac2];
+      const angle = tasteConfig.gradient.angle || 135;
+      effects.gradient = `linear-gradient(${angle}deg, ${colors.join(", ")})`;
+    }
+    
+    // Glassmorphism
+    if (tasteConfig.texture?.style === "glassmorphism") {
+      effects.backdropFilter = `blur(${tasteConfig.texture.blur || 12}px)`;
+      effects.background = `rgba(255,255,255,0.08)`;
+    }
+    
+    // Border radius mapping
+    const radiusMap = { none: 0, sm: 6, md: 12, lg: 20, xl: 28, full: 999 };
+    effects.borderRadius = radiusMap[tasteConfig.shape?.borderRadius] || 12;
+    
+    return effects;
+  }, [tasteConfig, p]);
+
+  const styleEffects = getStyleEffects();
 
   const exportJSON=useCallback(()=>{
     const data=JSON.stringify({shapes,pal,taste,prefV,gest},null,2);
@@ -1076,6 +1140,55 @@ export default function App(){
               )}
             </div>
 
+            {/* Demo Style Button */}
+            <button
+              onClick={() => {
+                const dreamyStyle = {
+                  id: "dreamy-aurora-demo",
+                  name: "Dreamy Aurora",
+                  vibe: "Ethereal cloudscape with warm inner glow",
+                  colors: {
+                    bg: "#0F1B3D",
+                    card: "rgba(255,255,255,0.08)",
+                    ac: "#FF7B9C",
+                    ac2: "#5BCEFA",
+                    tx: "#F0E6FF",
+                    mu: "#9B8FC7",
+                    bd: "rgba(255,123,156,0.25)",
+                    su: "rgba(91,206,250,0.1)"
+                  },
+                  gradient: { enabled: true, colors: ["#FF7B9C", "#FFB347", "#5BCEFA"], angle: 135 },
+                  glow: { enabled: true, color: "#FF7B9C", intensity: "strong", blur: 20 },
+                  shape: { borderRadius: "xl" },
+                  texture: { style: "glassmorphism", blur: 12 },
+                  thumbnail: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%23FF7B9C'/%3E%3Cstop offset='50%25' style='stop-color:%23FFB347'/%3E%3Cstop offset='100%25' style='stop-color:%235BCEFA'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect fill='url(%23g)' width='100' height='100'/%3E%3C/svg%3E",
+                  createdAt: Date.now(),
+                };
+                if (!customTastes.find(t => t.id === "dreamy-aurora-demo")) {
+                  setCustomTastes(prev => [...prev, dreamyStyle]);
+                }
+                setActiveTaste("dreamy-aurora-demo");
+              }}
+              style={{
+                width:"100%",
+                padding:"8px 12px",
+                marginBottom:12,
+                borderRadius:8,
+                border:"none",
+                background:"linear-gradient(135deg, #FF7B9C, #FFB347, #5BCEFA)",
+                color:"#fff",
+                fontSize:12,
+                fontWeight:500,
+                cursor:"pointer",
+                display:"flex",
+                alignItems:"center",
+                justifyContent:"center",
+                gap:6,
+              }}
+            >
+              ✨ Try Dreamy Aurora
+            </button>
+
             {/* Custom Tastes */}
             {customTastes.length > 0 && (
               <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:12}}>
@@ -1265,7 +1378,7 @@ export default function App(){
                     onTouchStart={e=>{if(e.touches[0]){const t=e.touches[0];onDown({clientX:t.clientX,clientY:t.clientY,stopPropagation:()=>{}},s)}}}
                     onMouseEnter={()=>setHov(s.id)} onMouseLeave={()=>setHov(null)}
                     style={{width:s.w,height:s.h,cursor:isDrg?"grabbing":"grab",transition:isDrg?"none":"transform .1s",transform:isDrg?"scale(1.015)":"scale(1)",filter:isDrg?`drop-shadow(0 8px 20px ${p.ac}15)`:"none",outline:isSel?`2px solid ${p.ac}55`:"none",outlineOffset:4,borderRadius:14,touchAction:"none"}}>
-                    <C type={s.type} v={s.variant||0} p={p} editable={isSel} texts={s.texts||{}} onText={(k,val)=>updateText(s.id,k,val)} font={s.font||0}/>
+                    <C type={s.type} v={s.variant||0} p={p} editable={isSel} texts={s.texts||{}} onText={(k,val)=>updateText(s.id,k,val)} font={s.font||0} fx={styleEffects}/>
                     {isSel&&<div onMouseDown={e=>{e.stopPropagation();setRsz(s.id)}} style={{position:"absolute",right:-4,bottom:-4,width:8,height:8,background:p.ac,borderRadius:2,cursor:"nwse-resize",zIndex:11}}/>}
                   </div>
                 </div>

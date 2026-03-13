@@ -1,15 +1,15 @@
-import Anthropic from "@anthropic-ai/sdk";
 import express from "express";
 import cors from "cors";
 import { fileURLToPath } from "url";
 import { dirname } from "path";
+import { execSync } from "child_process";
+import fs from "fs";
+import os from "os";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: "10mb" }));
-
-const client = new Anthropic();
 
 const STYLE_EXTRACTION_PROMPT = `You are a design system AI that extracts visual taste from images.
 
@@ -65,67 +65,85 @@ IMPORTANT:
 - If the image has motion/animation, describe the motion style
 - Think like a senior product designer interpreting a mood board`;
 
+// Queue for pending analyses (to be processed by Claude)
+const pendingAnalyses = new Map();
+const completedAnalyses = new Map();
+
+// Save image for analysis and return a ticket
 app.post("/api/analyze", async (req, res) => {
   try {
-    const { image } = req.body; // base64 data URL
+    const { image } = req.body;
     
     if (!image) {
       return res.status(400).json({ error: "No image provided" });
     }
 
-    // Extract base64 data and media type
     const match = image.match(/^data:(image\/\w+);base64,(.+)$/);
     if (!match) {
       return res.status(400).json({ error: "Invalid image format" });
     }
 
+    // Save image to file for Claude to analyze
     const [, mediaType, base64Data] = match;
-
-    const response = await client.messages.create({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 2000,
-      messages: [
-        {
-          role: "user",
-          content: [
-            {
-              type: "image",
-              source: {
-                type: "base64",
-                media_type: mediaType,
-                data: base64Data,
-              },
-            },
-            {
-              type: "text",
-              text: STYLE_EXTRACTION_PROMPT,
-            },
-          ],
-        },
-      ],
-    });
-
-    const text = response.content[0].text;
+    const ext = mediaType.split("/")[1] || "png";
+    const ticketId = Date.now().toString(36) + Math.random().toString(36).substr(2, 6);
+    const imgPath = `${os.tmpdir()}/tasteprint-${ticketId}.${ext}`;
     
-    // Parse the JSON response
-    let style;
-    try {
-      style = JSON.parse(text);
-    } catch (e) {
-      // Try to extract JSON from response
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        style = JSON.parse(jsonMatch[0]);
-      } else {
-        throw new Error("Could not parse style from response");
-      }
-    }
-
-    res.json({ style });
+    fs.writeFileSync(imgPath, Buffer.from(base64Data, "base64"));
+    
+    // Store pending analysis
+    pendingAnalyses.set(ticketId, { imgPath, createdAt: Date.now() });
+    
+    // Write to a queue file that Claude can read
+    const queueFile = `${os.homedir()}/.openclaw/workspace/Tasteprint/.analyze-queue.json`;
+    const queue = fs.existsSync(queueFile) ? JSON.parse(fs.readFileSync(queueFile, "utf8")) : [];
+    queue.push({ ticketId, imgPath, createdAt: Date.now() });
+    fs.writeFileSync(queueFile, JSON.stringify(queue, null, 2));
+    
+    console.log(`Analysis queued: ${ticketId} -> ${imgPath}`);
+    
+    res.json({ ticketId, status: "queued" });
   } catch (error) {
-    console.error("Analysis error:", error);
+    console.error("Queue error:", error);
     res.status(500).json({ error: error.message });
   }
+});
+
+// Poll for analysis result
+app.get("/api/analyze/:ticketId", (req, res) => {
+  const { ticketId } = req.params;
+  
+  // Check for completed analysis
+  const resultFile = `${os.homedir()}/.openclaw/workspace/Tasteprint/.analyze-results/${ticketId}.json`;
+  if (fs.existsSync(resultFile)) {
+    const style = JSON.parse(fs.readFileSync(resultFile, "utf8"));
+    return res.json({ status: "complete", style });
+  }
+  
+  // Check if still pending
+  if (pendingAnalyses.has(ticketId)) {
+    return res.json({ status: "pending" });
+  }
+  
+  res.status(404).json({ error: "Analysis not found" });
+});
+
+// Submit analysis result (called by Claude)
+app.post("/api/analyze/:ticketId/result", express.json(), (req, res) => {
+  const { ticketId } = req.params;
+  const { style } = req.body;
+  
+  // Save result
+  const resultsDir = `${os.homedir()}/.openclaw/workspace/Tasteprint/.analyze-results`;
+  if (!fs.existsSync(resultsDir)) fs.mkdirSync(resultsDir, { recursive: true });
+  
+  fs.writeFileSync(`${resultsDir}/${ticketId}.json`, JSON.stringify(style, null, 2));
+  
+  // Clean up
+  pendingAnalyses.delete(ticketId);
+  
+  console.log(`Analysis complete: ${ticketId}`);
+  res.json({ success: true });
 });
 
 // Serve static files in production

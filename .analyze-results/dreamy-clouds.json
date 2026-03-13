@@ -1,0 +1,56 @@
+{
+  "name": "Dreamy Aurora",
+  "vibe": "Ethereal cloudscape with warm inner glow and cool edges, like a neon sunset through cotton candy",
+  "colors": {
+    "bg": "#0F1B3D",
+    "card": "rgba(255,255,255,0.08)",
+    "ac": "#FF7B9C",
+    "ac2": "#5BCEFA",
+    "ac3": "#FFB347",
+    "tx": "#F0E6FF",
+    "mu": "#9B8FC7",
+    "bd": "rgba(255,123,156,0.25)",
+    "su": "rgba(91,206,250,0.1)"
+  },
+  "gradient": {
+    "enabled": true,
+    "colors": ["#FF7B9C", "#FFB347", "#5BCEFA"],
+    "angle": 135,
+    "type": "linear"
+  },
+  "glow": {
+    "enabled": true,
+    "color": "#FF7B9C",
+    "intensity": "strong",
+    "blur": 20
+  },
+  "typography": {
+    "fontCategory": "sans-serif",
+    "fontWeight": "light",
+    "letterSpacing": "wide",
+    "textTransform": "none"
+  },
+  "shape": {
+    "borderRadius": "xl",
+    "borderWidth": "none",
+    "style": "soft"
+  },
+  "elevation": {
+    "style": "glow",
+    "type": "glow",
+    "color": "#FF7B9C40"
+  },
+  "density": "spacious",
+  "texture": {
+    "style": "glassmorphism",
+    "blur": 12,
+    "noise": 0.03,
+    "gradientIntensity": "strong"
+  },
+  "motion": {
+    "timing": "slow",
+    "easing": "ease-out",
+    "intensity": "expressive"
+  },
+  "personality": ["dreamy", "ethereal", "vibrant", "warm", "magical"]
+}

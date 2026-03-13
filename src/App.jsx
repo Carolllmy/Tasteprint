@@ -803,7 +803,7 @@ export default function App(){
       <div style={{display:"flex",flex:1,overflow:"hidden",position:"relative"}}>
         {/* LIBRARY - Sidebar */}
         <div style={{
-          width:isMobile?320:300,
+          width:isMobile?340:360,
           padding:"10px 0",
           overflowY:"auto",
           borderRight:`1px solid ${p.bd}`,

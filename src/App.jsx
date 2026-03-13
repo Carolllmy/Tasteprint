@@ -651,6 +651,8 @@ export default function App(){
   const [pan,setPan]=useState(null);
   const [sidebarOpen,setSidebarOpen]=useState(false);
   const [isMobile,setIsMobile]=useState(typeof window!=='undefined'&&window.innerWidth<768);
+  const [sidebarWidth,setSidebarWidth]=useState(()=>load("sidebarWidth",360));
+  const [sidebarResizing,setSidebarResizing]=useState(false);
   const cRef=useRef(null);
   const dRef=useRef(null);
   const camRef=useRef(cam);
@@ -663,8 +665,29 @@ export default function App(){
   },[]);
 
   useEffect(()=>{
-    localStorage.setItem(STORE_KEY,JSON.stringify({shapes,pal,taste,prefV,gest}));
-  },[shapes,pal,taste,prefV,gest]);
+    localStorage.setItem(STORE_KEY,JSON.stringify({shapes,pal,taste,prefV,gest,sidebarWidth}));
+  },[shapes,pal,taste,prefV,gest,sidebarWidth]);
+
+  // Sidebar resize handlers
+  const onSidebarResizeStart = useCallback((e) => {
+    e.preventDefault();
+    setSidebarResizing(true);
+  }, []);
+
+  useEffect(() => {
+    if (!sidebarResizing) return;
+    const onMove = (e) => {
+      const newWidth = Math.max(280, Math.min(600, e.clientX));
+      setSidebarWidth(newWidth);
+    };
+    const onUp = () => setSidebarResizing(false);
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+  }, [sidebarResizing]);
 
   const exportJSON=useCallback(()=>{
     const data=JSON.stringify({shapes,pal,taste,prefV,gest},null,2);
@@ -803,20 +826,39 @@ export default function App(){
       <div style={{display:"flex",flex:1,overflow:"hidden",position:"relative"}}>
         {/* LIBRARY - Sidebar */}
         <div style={{
-          width:isMobile?340:360,
+          width:isMobile?340:sidebarWidth,
           padding:"10px 0",
           overflowY:"auto",
           borderRight:`1px solid ${p.bd}`,
           background:p.card,
           backdropFilter:"blur(8px)",
           flexShrink:0,
-          transition:"transform .3s ease, opacity .3s ease",
+          transition:sidebarResizing?"none":"transform .3s ease, opacity .3s ease",
           position:isMobile?"absolute":"relative",
           left:0,top:0,bottom:0,
           zIndex:isMobile?100:1,
           transform:isMobile&&!sidebarOpen?"translateX(-100%)":"translateX(0)",
           boxShadow:isMobile&&sidebarOpen?`4px 0 20px ${p.tx}15`:"none"
         }}>
+          {/* Resize handle */}
+          {!isMobile && (
+            <div 
+              onMouseDown={onSidebarResizeStart}
+              style={{
+                position:"absolute",
+                right:0,
+                top:0,
+                bottom:0,
+                width:6,
+                cursor:"col-resize",
+                background:sidebarResizing?p.ac:"transparent",
+                transition:"background .15s",
+                zIndex:10
+              }}
+              onMouseEnter={e=>e.currentTarget.style.background=p.ac+"40"}
+              onMouseLeave={e=>{if(!sidebarResizing)e.currentTarget.style.background="transparent"}}
+            />
+          )}
           <div style={{padding:"2px 14px 8px",fontSize:12,color:p.mu,textTransform:"uppercase",letterSpacing:"0.1em",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
             <span>M3 Components</span>
             {isMobile&&<button onClick={()=>setSidebarOpen(false)} style={{background:"none",border:"none",padding:4,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>

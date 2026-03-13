@@ -64,53 +64,92 @@ const VARIANTS = {
   "time-picker":       ["Dial","Input"],
   // Text inputs
   "text-field":        ["Filled","Outlined"],
+  // Toolbars
+  "toolbar":           ["Standard","Contextual"],
 };
 
-/* ========== M3 COMPONENT LIBRARY ========== */
+/* ========== M3 COMPONENT LIBRARY (matching m3.material.io) ========== */
 const LIB = [
-  { cat:"Actions", items:[
+  { cat:"App bars", items:[
+    {type:"top-app-bar",label:"Top app bar",w:360,h:64},
+    {type:"bottom-app-bar",label:"Bottom app bar",w:360,h:80},
+  ]},
+  { cat:"Badges", items:[
+    {type:"badge",label:"Badge",w:24,h:24},
+  ]},
+  { cat:"Buttons", items:[
     {type:"common-button",label:"Common button",w:140,h:40},
     {type:"fab",label:"FAB",w:56,h:56},
     {type:"extended-fab",label:"Extended FAB",w:140,h:56},
     {type:"icon-button",label:"Icon button",w:48,h:48},
     {type:"segmented-button",label:"Segmented button",w:280,h:40},
   ]},
-  { cat:"Communication", items:[
-    {type:"badge",label:"Badge",w:24,h:24},
-    {type:"progress",label:"Progress indicator",w:200,h:40},
-    {type:"snackbar",label:"Snackbar",w:320,h:48},
-  ]},
-  { cat:"Containment", items:[
+  { cat:"Cards", items:[
     {type:"card",label:"Card",w:280,h:180},
+  ]},
+  { cat:"Carousel", items:[
     {type:"carousel",label:"Carousel",w:360,h:200},
+  ]},
+  { cat:"Checkbox", items:[
+    {type:"checkbox",label:"Checkbox",w:40,h:40},
+  ]},
+  { cat:"Chips", items:[
+    {type:"chip",label:"Chip",w:100,h:32},
+  ]},
+  { cat:"Date & time pickers", items:[
+    {type:"date-picker",label:"Date picker",w:328,h:380},
+    {type:"time-picker",label:"Time picker",w:280,h:280},
+  ]},
+  { cat:"Dialogs", items:[
     {type:"dialog",label:"Dialog",w:312,h:200},
+  ]},
+  { cat:"Divider", items:[
     {type:"divider",label:"Divider",w:280,h:16},
+  ]},
+  { cat:"Lists", items:[
     {type:"list",label:"List",w:280,h:180},
-    {type:"tooltip",label:"Tooltip",w:200,h:48},
-    {type:"bottom-sheet",label:"Bottom sheet",w:320,h:200},
-    {type:"side-sheet",label:"Side sheet",w:280,h:300},
+  ]},
+  { cat:"Loading & progress", items:[
+    {type:"progress",label:"Progress indicator",w:200,h:40},
+  ]},
+  { cat:"Menus", items:[
+    {type:"menu",label:"Menu",w:200,h:180},
   ]},
   { cat:"Navigation", items:[
-    {type:"bottom-app-bar",label:"Bottom app bar",w:360,h:80},
     {type:"navigation-bar",label:"Navigation bar",w:360,h:80},
     {type:"navigation-drawer",label:"Navigation drawer",w:280,h:320},
     {type:"navigation-rail",label:"Navigation rail",w:80,h:280},
-    {type:"search",label:"Search",w:360,h:56},
-    {type:"tabs",label:"Tabs",w:360,h:48},
-    {type:"top-app-bar",label:"Top app bar",w:360,h:64},
   ]},
-  { cat:"Selection", items:[
-    {type:"checkbox",label:"Checkbox",w:40,h:40},
-    {type:"chip",label:"Chip",w:100,h:32},
-    {type:"date-picker",label:"Date picker",w:328,h:380},
-    {type:"menu",label:"Menu",w:200,h:180},
+  { cat:"Radio button", items:[
     {type:"radio-button",label:"Radio button",w:40,h:40},
-    {type:"slider",label:"Slider",w:200,h:40},
-    {type:"switch",label:"Switch",w:52,h:32},
-    {type:"time-picker",label:"Time picker",w:280,h:280},
   ]},
-  { cat:"Text inputs", items:[
+  { cat:"Search", items:[
+    {type:"search",label:"Search",w:360,h:56},
+  ]},
+  { cat:"Sheets", items:[
+    {type:"bottom-sheet",label:"Bottom sheet",w:320,h:200},
+    {type:"side-sheet",label:"Side sheet",w:280,h:300},
+  ]},
+  { cat:"Sliders", items:[
+    {type:"slider",label:"Slider",w:200,h:40},
+  ]},
+  { cat:"Snackbar", items:[
+    {type:"snackbar",label:"Snackbar",w:320,h:48},
+  ]},
+  { cat:"Switch", items:[
+    {type:"switch",label:"Switch",w:52,h:32},
+  ]},
+  { cat:"Tabs", items:[
+    {type:"tabs",label:"Tabs",w:360,h:48},
+  ]},
+  { cat:"Text fields", items:[
     {type:"text-field",label:"Text field",w:280,h:56},
+  ]},
+  { cat:"Toolbars", items:[
+    {type:"toolbar",label:"Toolbar",w:360,h:56},
+  ]},
+  { cat:"Tooltips", items:[
+    {type:"tooltip",label:"Tooltip",w:200,h:48},
   ]},
 ];
 
@@ -629,6 +668,32 @@ function C({type,v=0,p,editable,texts={},onText,font=0}){
     </div>;
   }
 
+  /* Toolbar - M3 */
+  if(type==="toolbar"){
+    if(v===0) return <div style={{...b,background:p.su,padding:"0 8px",display:"flex",alignItems:"center",gap:8}}>
+      <div style={{display:"flex",gap:4}}>
+        {Icons.edit(p.tx,20)}
+        {Icons.add(p.tx,20)}
+        {Icons.star(p.tx,20)}
+      </div>
+      <div style={{flex:1}}/>
+      <div style={{display:"flex",gap:4}}>
+        {Icons.search(p.tx,20)}
+        {Icons.settings(p.tx,20)}
+      </div>
+    </div>;
+    return <div style={{...b,background:p.ac,padding:"0 8px",display:"flex",alignItems:"center",gap:8}}>
+      {Icons.close("#fff",20)}
+      <span style={{fontSize:14,fontWeight:500,color:"#fff",marginLeft:8}}>3 selected</span>
+      <div style={{flex:1}}/>
+      <div style={{display:"flex",gap:4}}>
+        {Icons.edit("#fff",20)}
+        {Icons.star("#fff",20)}
+        {Icons.close("#fff",20)}
+      </div>
+    </div>;
+  }
+
   return <div style={{...b,background:p.su,borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center"}}><span style={{fontSize:12,color:p.mu}}>Unknown</span></div>;
 }
 
@@ -644,7 +709,7 @@ export default function App(){
   const [gest,setGest]=useState(()=>load("gest",0));
   const [hist,setHist]=useState([]);
   const [rsz,setRsz]=useState(null);
-  const [expCat,setExpCat]=useState(["Actions","Communication","Containment","Navigation","Selection","Text inputs"]); // All expanded by default
+  const [expCat,setExpCat]=useState(["App bars","Badges","Buttons","Cards","Carousel","Checkbox","Chips","Date & time pickers","Dialogs","Divider","Lists","Loading & progress","Menus","Navigation","Radio button","Search","Sheets","Sliders","Snackbar","Switch","Tabs","Text fields","Toolbars","Tooltips"]); // All expanded
   const [prefV,setPrefV]=useState(()=>load("prefV",{}));
   const [hov,setHov]=useState(null);
   const [cam,setCam]=useState({x:0,y:0,z:1});

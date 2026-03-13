@@ -875,7 +875,7 @@ export default function App(){
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={p.tx} strokeWidth="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
           </button>}
           <span style={{fontFamily:"'Instrument Serif',Georgia,serif",fontSize:isMobile?24:32,color:p.tx,letterSpacing:"-0.02em"}}>Tasteprint</span>
-          {!isMobile&&<span style={{fontSize:12,color:p.mu,letterSpacing:"0.1em",textTransform:"uppercase"}}>M3 playground</span>}
+          {!isMobile&&<span style={{fontSize:12,color:p.mu}}>A design system that knows your taste.</span>}
         </div>
         <div style={{display:"flex",alignItems:"center",gap:isMobile?6:10,flexWrap:"wrap"}}>
           <div style={{display:"flex",gap:isMobile?3:5}}>{Object.entries(PAL).map(([k,v])=><button key={k} onClick={()=>setPal(k)} title={v.name} style={{width:isMobile?18:20,height:isMobile?18:20,borderRadius:999,border:pal===k?`2px solid ${p.ac}`:"2px solid transparent",background:k==="noir"?"#1A1A1E":v.ac,cursor:"pointer",transition:"all .2s",transform:pal===k?"scale(1.2)":"scale(1)"}}/>)}</div>
@@ -925,7 +925,7 @@ export default function App(){
             />
           )}
           <div style={{padding:"2px 14px 8px",fontSize:12,color:p.mu,textTransform:"uppercase",letterSpacing:"0.1em",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-            <span>M3 Components</span>
+            <span>Your components</span>
             {isMobile&&<button onClick={()=>setSidebarOpen(false)} style={{background:"none",border:"none",padding:4,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={p.mu} strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
             </button>}

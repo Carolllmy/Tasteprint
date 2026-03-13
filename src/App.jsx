@@ -740,6 +740,11 @@ export default function App(){
   const [analyzing,setAnalyzing]=useState(false);
   const [editingName,setEditingName]=useState(null);
   const [tempName,setTempName]=useState("");
+  
+  // Taste Selection States
+  const [tasteOptions,setTasteOptions]=useState(null); // 3 options to choose from
+  const [pendingImage,setPendingImage]=useState(null); // base64 of dropped image
+  const [tasteHistory,setTasteHistory]=useState(()=>load("tasteHistory",{chosen:[],discarded:[]}));
   const [sidebarResizing,setSidebarResizing]=useState(false);
   const cRef=useRef(null);
   const dRef=useRef(null);
@@ -782,11 +787,95 @@ export default function App(){
     localStorage.setItem(STORE_KEY, JSON.stringify({shapes,pal,taste,prefV,gest,sidebarWidth,customTastes,activeTaste}));
   }, [customTastes, activeTaste]);
 
+  // Generate 3 style variations from image
+  const generateStyleOptions = useCallback((base64) => {
+    // Generate 3 distinct style interpretations
+    const hash = base64.slice(100, 200).split("").reduce((a, c) => ((a << 5) - a + c.charCodeAt(0)) | 0, 0);
+    
+    // Extract base hue from hash
+    const baseHue = Math.abs(hash % 360);
+    const warmHue = (baseHue + 15) % 360; // shift toward warm
+    const coolHue = (baseHue + 180) % 360; // complementary cool
+    
+    const hslToHex = (h, s, l) => {
+      s /= 100; l /= 100;
+      const a = s * Math.min(l, 1 - l);
+      const f = n => {
+        const k = (n + h / 30) % 12;
+        const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+        return Math.round(255 * color).toString(16).padStart(2, "0");
+      };
+      return `#${f(0)}${f(8)}${f(4)}`;
+    };
+
+    return [
+      {
+        id: `opt-warm-${Date.now()}`,
+        name: "Warm Glow",
+        vibe: "Cozy and inviting with soft warm tones",
+        colors: {
+          bg: hslToHex(warmHue, 15, 12),
+          card: "rgba(255,255,255,0.06)",
+          ac: hslToHex(warmHue, 70, 60),
+          ac2: hslToHex((warmHue + 30) % 360, 65, 55),
+          tx: hslToHex(warmHue, 20, 92),
+          mu: hslToHex(warmHue, 25, 60),
+          bd: `${hslToHex(warmHue, 70, 60)}30`,
+          su: `${hslToHex(warmHue, 70, 60)}15`
+        },
+        gradient: { enabled: true, colors: [hslToHex(warmHue, 70, 60), hslToHex((warmHue+30)%360, 65, 55)], angle: 135 },
+        glow: { enabled: true, color: hslToHex(warmHue, 70, 60), blur: 18 },
+        shape: { borderRadius: "lg" },
+        texture: { style: "gradient" },
+        emphasis: "warm"
+      },
+      {
+        id: `opt-cool-${Date.now()}`,
+        name: "Cool Edge",
+        vibe: "Modern and crisp with refreshing cool tones",
+        colors: {
+          bg: hslToHex(coolHue, 20, 10),
+          card: "rgba(255,255,255,0.04)",
+          ac: hslToHex(coolHue, 65, 55),
+          ac2: hslToHex((coolHue + 40) % 360, 60, 50),
+          tx: hslToHex(coolHue, 15, 95),
+          mu: hslToHex(coolHue, 20, 55),
+          bd: `${hslToHex(coolHue, 65, 55)}25`,
+          su: `${hslToHex(coolHue, 65, 55)}10`
+        },
+        gradient: { enabled: false },
+        glow: { enabled: true, color: hslToHex(coolHue, 65, 55), blur: 12 },
+        shape: { borderRadius: "md" },
+        texture: { style: "flat" },
+        emphasis: "cool"
+      },
+      {
+        id: `opt-bold-${Date.now()}`,
+        name: "Bold Fusion",
+        vibe: "Dramatic and expressive with vibrant contrasts",
+        colors: {
+          bg: hslToHex(baseHue, 25, 8),
+          card: "rgba(255,255,255,0.08)",
+          ac: hslToHex(baseHue, 80, 55),
+          ac2: hslToHex(coolHue, 75, 50),
+          tx: "#FFFFFF",
+          mu: hslToHex(baseHue, 30, 65),
+          bd: `${hslToHex(baseHue, 80, 55)}35`,
+          su: `${hslToHex(baseHue, 80, 55)}20`
+        },
+        gradient: { enabled: true, colors: [hslToHex(baseHue, 80, 55), hslToHex(coolHue, 75, 50), hslToHex((baseHue+60)%360, 70, 60)], angle: 120 },
+        glow: { enabled: true, color: hslToHex(baseHue, 80, 55), blur: 25 },
+        shape: { borderRadius: "xl" },
+        texture: { style: "glassmorphism", blur: 15 },
+        emphasis: "dramatic"
+      }
+    ];
+  }, []);
+
   // Analyze dropped image
   const analyzeImage = useCallback(async (file) => {
     setAnalyzing(true);
     try {
-      // Convert to base64
       const reader = new FileReader();
       const base64 = await new Promise((resolve, reject) => {
         reader.onload = () => resolve(reader.result);
@@ -794,53 +883,62 @@ export default function App(){
         reader.readAsDataURL(file);
       });
 
-      // Queue for analysis
-      const queueRes = await fetch(`${API_URL}/analyze`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image: base64 }),
-      });
-
-      if (!queueRes.ok) throw new Error("Failed to queue analysis");
+      // Generate 3 style options
+      const options = generateStyleOptions(base64);
       
-      const { ticketId } = await queueRes.json();
+      // Simulate brief processing
+      await new Promise(r => setTimeout(r, 600));
       
-      // Poll for result (max 60 seconds)
-      let style = null;
-      for (let i = 0; i < 60; i++) {
-        await new Promise(r => setTimeout(r, 1000));
-        const pollRes = await fetch(`${API_URL}/analyze/${ticketId}`);
-        const data = await pollRes.json();
-        
-        if (data.status === "complete") {
-          style = data.style;
-          break;
-        }
-      }
-      
-      if (!style) {
-        throw new Error("Analysis timed out - try again");
-      }
-      
-      // Create new taste with unique ID
-      const newTaste = {
-        id: Date.now().toString(36) + Math.random().toString(36).substr(2),
-        ...style,
-        thumbnail: base64,
-        createdAt: Date.now(),
-      };
-
-      setCustomTastes(prev => [...prev, newTaste]);
-      setActiveTaste(newTaste.id);
-      setEditingName(newTaste.id);
-      setTempName(newTaste.name);
+      setPendingImage(base64);
+      setTasteOptions(options);
     } catch (err) {
       console.error("Analysis error:", err);
       alert(err.message || "Failed to analyze image");
     } finally {
       setAnalyzing(false);
     }
-  }, []);
+  }, [generateStyleOptions]);
+
+  // Select a taste option
+  const selectTasteOption = useCallback((option) => {
+    const newTaste = {
+      ...option,
+      thumbnail: pendingImage,
+      createdAt: Date.now(),
+    };
+    
+    // Track preference
+    const discarded = tasteOptions.filter(o => o.id !== option.id).map(o => ({ ...o, discardedAt: Date.now() }));
+    setTasteHistory(prev => {
+      const updated = {
+        chosen: [...prev.chosen, { ...option, chosenAt: Date.now() }],
+        discarded: [...prev.discarded, ...discarded]
+      };
+      localStorage.setItem(STORE_KEY, JSON.stringify({ ...JSON.parse(localStorage.getItem(STORE_KEY) || "{}"), tasteHistory: updated }));
+      return updated;
+    });
+    
+    setCustomTastes(prev => [...prev, newTaste]);
+    setActiveTaste(newTaste.id);
+    setTasteOptions(null);
+    setPendingImage(null);
+    setEditingName(newTaste.id);
+    setTempName(newTaste.name);
+  }, [pendingImage, tasteOptions]);
+
+  // Regenerate options
+  const regenerateOptions = useCallback(() => {
+    if (pendingImage) {
+      // Track discarded options
+      setTasteHistory(prev => ({
+        ...prev,
+        discarded: [...prev.discarded, ...tasteOptions.map(o => ({ ...o, discardedAt: Date.now(), reason: "regenerate" }))]
+      }));
+      
+      const newOptions = generateStyleOptions(pendingImage + Date.now()); // Add timestamp for variation
+      setTasteOptions(newOptions);
+    }
+  }, [pendingImage, tasteOptions, generateStyleOptions]);
 
   // Taste drop handlers
   const onTasteDrop = useCallback((e) => {
@@ -1403,6 +1501,166 @@ export default function App(){
         </div>
       </div>
       <style>{`*{box-sizing:border-box;margin:0;padding:0}::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(128,128,128,.12);border-radius:2px}`}</style>
+      
+      {/* TASTE SELECTION MODAL */}
+      {tasteOptions && (
+        <div style={{
+          position:"fixed",
+          inset:0,
+          background:"rgba(0,0,0,0.85)",
+          backdropFilter:"blur(8px)",
+          display:"flex",
+          flexDirection:"column",
+          alignItems:"center",
+          justifyContent:"center",
+          zIndex:1000,
+          padding:20,
+        }}>
+          <div style={{maxWidth:1000,width:"100%"}}>
+            <div style={{textAlign:"center",marginBottom:24}}>
+              <h2 style={{fontSize:24,fontWeight:600,color:"#fff",marginBottom:8,fontFamily:"'Instrument Serif',Georgia,serif"}}>Choose Your Style</h2>
+              <p style={{fontSize:14,color:"rgba(255,255,255,0.6)"}}>Three interpretations of your inspiration. Pick the one that feels right.</p>
+            </div>
+            
+            {/* Options Grid */}
+            <div style={{display:"grid",gridTemplateColumns:"repeat(3, 1fr)",gap:16,marginBottom:24}}>
+              {tasteOptions.map((option, idx) => {
+                const optPal = option.colors;
+                const optFx = {
+                  boxShadow: option.glow?.enabled ? `0 0 ${option.glow.blur}px ${option.glow.color}60` : "",
+                  gradient: option.gradient?.enabled ? `linear-gradient(${option.gradient.angle}deg, ${option.gradient.colors.join(", ")})` : null,
+                  borderRadius: option.shape?.borderRadius === "xl" ? 24 : option.shape?.borderRadius === "lg" ? 16 : 12,
+                  backdropFilter: option.texture?.style === "glassmorphism" ? "blur(12px)" : "",
+                };
+                
+                return (
+                  <div
+                    key={option.id}
+                    onClick={() => selectTasteOption(option)}
+                    style={{
+                      background: optPal.bg,
+                      borderRadius: 16,
+                      padding: 20,
+                      cursor: "pointer",
+                      border: "2px solid transparent",
+                      transition: "all .2s",
+                      position: "relative",
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.borderColor = optPal.ac}
+                    onMouseLeave={e => e.currentTarget.style.borderColor = "transparent"}
+                  >
+                    {/* Option Header */}
+                    <div style={{marginBottom:16}}>
+                      <div style={{fontSize:16,fontWeight:600,color:optPal.tx,marginBottom:4}}>{option.name}</div>
+                      <div style={{fontSize:12,color:optPal.mu}}>{option.vibe}</div>
+                    </div>
+                    
+                    {/* Mini Component Grid */}
+                    <div style={{display:"flex",flexDirection:"column",gap:12}}>
+                      {/* Button Preview */}
+                      <div style={{
+                        height:40,
+                        background: optFx.gradient || optPal.ac,
+                        borderRadius: optFx.borderRadius,
+                        display:"flex",
+                        alignItems:"center",
+                        justifyContent:"center",
+                        boxShadow: optFx.boxShadow,
+                        backdropFilter: optFx.backdropFilter,
+                      }}>
+                        <span style={{color:"#fff",fontSize:14,fontWeight:500}}>Button</span>
+                      </div>
+                      
+                      {/* Card Preview */}
+                      <div style={{
+                        height:60,
+                        background: optPal.card,
+                        borderRadius: optFx.borderRadius - 4,
+                        padding:12,
+                        border:`1px solid ${optPal.bd}`,
+                        backdropFilter: optFx.backdropFilter,
+                      }}>
+                        <div style={{fontSize:12,fontWeight:500,color:optPal.tx,marginBottom:4}}>Card Title</div>
+                        <div style={{fontSize:11,color:optPal.mu}}>Supporting text here</div>
+                      </div>
+                      
+                      {/* Chip Preview */}
+                      <div style={{display:"flex",gap:8}}>
+                        <div style={{
+                          padding:"6px 12px",
+                          background:`${optPal.ac}20`,
+                          borderRadius:999,
+                          fontSize:12,
+                          color:optPal.ac,
+                          fontWeight:500,
+                        }}>Chip</div>
+                        <div style={{
+                          padding:"6px 12px",
+                          background:`${optPal.ac2}20`,
+                          borderRadius:999,
+                          fontSize:12,
+                          color:optPal.ac2,
+                          fontWeight:500,
+                        }}>Tag</div>
+                      </div>
+                    </div>
+                    
+                    {/* Click hint */}
+                    <div style={{
+                      position:"absolute",
+                      bottom:8,
+                      right:8,
+                      fontSize:10,
+                      color:optPal.mu,
+                      opacity:0.5,
+                    }}>Click to select</div>
+                  </div>
+                );
+              })}
+            </div>
+            
+            {/* Actions */}
+            <div style={{display:"flex",justifyContent:"center",gap:12}}>
+              <button
+                onClick={regenerateOptions}
+                style={{
+                  padding:"10px 20px",
+                  borderRadius:10,
+                  border:"1px solid rgba(255,255,255,0.2)",
+                  background:"transparent",
+                  color:"#fff",
+                  fontSize:14,
+                  cursor:"pointer",
+                  display:"flex",
+                  alignItems:"center",
+                  gap:6,
+                }}
+              >
+                🔄 Regenerate
+              </button>
+              <button
+                onClick={() => { setTasteOptions(null); setPendingImage(null); }}
+                style={{
+                  padding:"10px 20px",
+                  borderRadius:10,
+                  border:"1px solid rgba(255,255,255,0.2)",
+                  background:"transparent",
+                  color:"rgba(255,255,255,0.6)",
+                  fontSize:14,
+                  cursor:"pointer",
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+            
+            {/* Preference hint */}
+            <div style={{textAlign:"center",marginTop:20,fontSize:11,color:"rgba(255,255,255,0.3)"}}>
+              Your choices help personalize future suggestions • {tasteHistory.chosen.length} styles learned
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -697,6 +697,9 @@ function C({type,v=0,p,editable,texts={},onText,font=0}){
   return <div style={{...b,background:p.su,borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center"}}><span style={{fontSize:12,color:p.mu}}>Unknown</span></div>;
 }
 
+/* ========== API CONFIG ========== */
+const API_URL = import.meta.env.PROD ? "/api" : "http://localhost:3456/api";
+
 /* ========== MAIN APP ========== */
 export default function App(){
   const [shapes,setShapes]=useState(()=>load("shapes",[]));
@@ -717,6 +720,14 @@ export default function App(){
   const [sidebarOpen,setSidebarOpen]=useState(false);
   const [isMobile,setIsMobile]=useState(typeof window!=='undefined'&&window.innerWidth<768);
   const [sidebarWidth,setSidebarWidth]=useState(()=>load("sidebarWidth",240));
+  
+  // AI Taste States
+  const [customTastes,setCustomTastes]=useState(()=>load("customTastes",[]));
+  const [activeTaste,setActiveTaste]=useState(()=>load("activeTaste",null));
+  const [dropHover,setDropHover]=useState(false);
+  const [analyzing,setAnalyzing]=useState(false);
+  const [editingName,setEditingName]=useState(null);
+  const [tempName,setTempName]=useState("");
   const [sidebarResizing,setSidebarResizing]=useState(false);
   const cRef=useRef(null);
   const dRef=useRef(null);
@@ -753,6 +764,97 @@ export default function App(){
       window.removeEventListener('mouseup', onUp);
     };
   }, [sidebarResizing]);
+
+  // Save custom tastes
+  useEffect(() => {
+    localStorage.setItem(STORE_KEY, JSON.stringify({shapes,pal,taste,prefV,gest,sidebarWidth,customTastes,activeTaste}));
+  }, [customTastes, activeTaste]);
+
+  // Analyze dropped image
+  const analyzeImage = useCallback(async (file) => {
+    setAnalyzing(true);
+    try {
+      // Convert to base64
+      const reader = new FileReader();
+      const base64 = await new Promise((resolve, reject) => {
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
+      // Call API
+      const res = await fetch(`${API_URL}/analyze`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image: base64 }),
+      });
+
+      if (!res.ok) throw new Error("Analysis failed");
+      
+      const { style } = await res.json();
+      
+      // Create new taste with unique ID
+      const newTaste = {
+        id: Date.now().toString(36) + Math.random().toString(36).substr(2),
+        ...style,
+        thumbnail: base64,
+        createdAt: Date.now(),
+      };
+
+      setCustomTastes(prev => [...prev, newTaste]);
+      setActiveTaste(newTaste.id);
+      setEditingName(newTaste.id);
+      setTempName(newTaste.name);
+    } catch (err) {
+      console.error("Analysis error:", err);
+      alert("Failed to analyze image. Make sure the server is running.");
+    } finally {
+      setAnalyzing(false);
+    }
+  }, []);
+
+  // Taste drop handlers
+  const onTasteDrop = useCallback((e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDropHover(false);
+    const file = e.dataTransfer?.files?.[0];
+    if (file && file.type.startsWith("image/")) {
+      analyzeImage(file);
+    }
+  }, [analyzeImage]);
+
+  const onTasteDragOver = useCallback((e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDropHover(true);
+  }, []);
+
+  const onTasteDragLeave = useCallback((e) => {
+    e.stopPropagation();
+    setDropHover(false);
+  }, []);
+
+  // Get active palette (custom taste or preset)
+  const getActivePalette = useCallback(() => {
+    if (activeTaste) {
+      const taste = customTastes.find(t => t.id === activeTaste);
+      if (taste?.colors) return { ...taste.colors, name: taste.name };
+    }
+    return PAL[pal];
+  }, [activeTaste, customTastes, pal]);
+
+  const p = getActivePalette();
+
+  // Get active taste config
+  const getActiveTasteConfig = useCallback(() => {
+    if (activeTaste) {
+      return customTastes.find(t => t.id === activeTaste);
+    }
+    return null;
+  }, [activeTaste, customTastes]);
+
+  const tasteConfig = getActiveTasteConfig();
 
   const exportJSON=useCallback(()=>{
     const data=JSON.stringify({shapes,pal,taste,prefV,gest},null,2);
@@ -860,12 +962,12 @@ export default function App(){
     return()=>el.removeEventListener("wheel",h);
   },[]);
 
-  const p=PAL[pal];
   const btnSt={background:"none",border:`1px solid ${p.bd}`,borderRadius:8,padding:"5px 12px",fontSize:12,color:p.mu,cursor:"pointer",fontFamily:"inherit"};
   const zoomPct=Math.round(cam.z*100);
 
   return(
     <div style={{width:"100%",height:"100vh",display:"flex",flexDirection:"column",background:p.bg,fontFamily:"'DM Sans',system-ui,sans-serif",color:p.tx,transition:"background .4s,color .4s"}}>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&family=Sora:wght@400;500;600;700&family=Work+Sans:wght@400;500;600;700&family=Figtree:wght@400;500;600;700&family=Instrument+Serif&display=swap" rel="stylesheet"/>
 
       {/* HEADER */}
@@ -924,11 +1026,159 @@ export default function App(){
               onMouseLeave={e=>{if(!sidebarResizing)e.currentTarget.style.background="transparent"}}
             />
           )}
-          <div style={{padding:"2px 14px 8px",fontSize:12,color:p.mu,textTransform:"uppercase",letterSpacing:"0.1em",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          {/* TASTE SECTION */}
+          <div style={{padding:"10px 14px",borderBottom:`1px solid ${p.bd}`}}>
+            <div style={{fontSize:12,color:p.mu,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:10,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <span>Your taste</span>
+              {isMobile&&<button onClick={()=>setSidebarOpen(false)} style={{background:"none",border:"none",padding:4,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={p.mu} strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+              </button>}
+            </div>
+            
+            {/* Drop Zone */}
+            <div
+              onDrop={onTasteDrop}
+              onDragOver={onTasteDragOver}
+              onDragLeave={onTasteDragLeave}
+              style={{
+                border:`2px dashed ${dropHover ? p.ac : p.bd}`,
+                borderRadius:12,
+                padding:analyzing ? 20 : 16,
+                textAlign:"center",
+                background:dropHover ? p.ac+"10" : p.su,
+                transition:"all .2s",
+                cursor:"pointer",
+                marginBottom:12,
+              }}
+              onClick={() => {
+                if (analyzing) return;
+                const input = document.createElement("input");
+                input.type = "file";
+                input.accept = "image/*";
+                input.onchange = (e) => {
+                  const file = e.target.files?.[0];
+                  if (file) analyzeImage(file);
+                };
+                input.click();
+              }}
+            >
+              {analyzing ? (
+                <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:8}}>
+                  <div style={{width:24,height:24,border:`2px solid ${p.ac}`,borderTopColor:"transparent",borderRadius:"50%",animation:"spin 1s linear infinite"}}/>
+                  <span style={{fontSize:12,color:p.mu}}>Extracting taste...</span>
+                </div>
+              ) : (
+                <>
+                  <div style={{fontSize:20,marginBottom:4}}>🎨</div>
+                  <div style={{fontSize:12,color:p.tx,fontWeight:500}}>Drop inspiration</div>
+                  <div style={{fontSize:12,color:p.mu}}>or click to upload</div>
+                </>
+              )}
+            </div>
+
+            {/* Custom Tastes */}
+            {customTastes.length > 0 && (
+              <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:12}}>
+                {customTastes.map(t => (
+                  <div
+                    key={t.id}
+                    onClick={() => setActiveTaste(activeTaste === t.id ? null : t.id)}
+                    style={{
+                      display:"flex",
+                      alignItems:"center",
+                      gap:8,
+                      padding:6,
+                      borderRadius:8,
+                      background:activeTaste === t.id ? p.ac+"20" : "transparent",
+                      border:`1px solid ${activeTaste === t.id ? p.ac : "transparent"}`,
+                      cursor:"pointer",
+                      transition:"all .15s",
+                    }}
+                  >
+                    <img
+                      src={t.thumbnail}
+                      style={{width:32,height:32,borderRadius:6,objectFit:"cover"}}
+                    />
+                    {editingName === t.id ? (
+                      <input
+                        autoFocus
+                        value={tempName}
+                        onChange={(e) => setTempName(e.target.value)}
+                        onBlur={() => {
+                          setCustomTastes(prev => prev.map(x => x.id === t.id ? {...x, name: tempName} : x));
+                          setEditingName(null);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            setCustomTastes(prev => prev.map(x => x.id === t.id ? {...x, name: tempName} : x));
+                            setEditingName(null);
+                          }
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                        style={{
+                          flex:1,
+                          fontSize:12,
+                          fontWeight:500,
+                          background:p.bg,
+                          border:`1px solid ${p.ac}`,
+                          borderRadius:4,
+                          padding:"2px 6px",
+                          color:p.tx,
+                          outline:"none",
+                        }}
+                      />
+                    ) : (
+                      <span
+                        style={{flex:1,fontSize:12,fontWeight:500,color:p.tx}}
+                        onDoubleClick={(e) => {
+                          e.stopPropagation();
+                          setEditingName(t.id);
+                          setTempName(t.name);
+                        }}
+                      >
+                        {t.name}
+                      </span>
+                    )}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (activeTaste === t.id) setActiveTaste(null);
+                        setCustomTastes(prev => prev.filter(x => x.id !== t.id));
+                      }}
+                      style={{background:"none",border:"none",padding:2,cursor:"pointer",opacity:.5,display:"flex"}}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={p.mu} strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Preset Palettes */}
+            <div style={{fontSize:12,color:p.mu,marginBottom:6}}>Presets</div>
+            <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+              {Object.entries(PAL).map(([k,v])=>(
+                <div
+                  key={k}
+                  onClick={()=>{setPal(k);setActiveTaste(null);}}
+                  style={{
+                    width:28,
+                    height:28,
+                    borderRadius:6,
+                    background:`linear-gradient(135deg, ${v.ac} 50%, ${v.bg} 50%)`,
+                    cursor:"pointer",
+                    border:pal===k && !activeTaste ? `2px solid ${v.ac}` : `2px solid transparent`,
+                    transition:"transform .15s",
+                  }}
+                  title={v.name}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* COMPONENTS SECTION */}
+          <div style={{padding:"10px 14px 8px",fontSize:12,color:p.mu,textTransform:"uppercase",letterSpacing:"0.1em"}}>
             <span>Your components</span>
-            {isMobile&&<button onClick={()=>setSidebarOpen(false)} style={{background:"none",border:"none",padding:4,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={p.mu} strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
-            </button>}
           </div>
           {isMobile&&<div style={{padding:"0 14px 10px",fontSize:12,color:p.mu,opacity:.7}}>Tap to add to canvas</div>}
           {LIB.map(cat=>{
